@@ -1,32 +1,36 @@
 package shevt.game.service;
 
 
-import shevt.game.model.Animal;
+import org.springframework.stereotype.Component;
+import shevt.game.model.AnimalNode;
 import shevt.game.model.FactNode;
 import shevt.game.model.Graph;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Stack;
 
 import static shevt.game.service.ConsoleService.getAnswerFromConsole;
 import static shevt.game.service.ConsoleService.readConsole;
 
+@Component
 public class GameService {
 
-    public GameService() {
+    private final ConsoleService cs;
+
+    public GameService(ConsoleService cs) {
+        this.cs = cs;
     }
 
     public Graph createGame() {
         Graph graph = new Graph();
 
-        Animal cat = new Animal("Кот");
-        Animal kit = new Animal("Кит");
+        AnimalNode cat = new AnimalNode("Кот");
+        AnimalNode whale = new AnimalNode("Кит");
         FactNode factNode = new FactNode("Живет на суше");
 
         factNode.getAnswerToAnimalMap().put(true, cat);
-        factNode.getAnswerToAnimalMap().put(false, kit);
+        factNode.getAnswerToAnimalMap().put(false, whale);
 
         graph.getFactNodes().add(factNode);
         return graph;
@@ -34,26 +38,20 @@ public class GameService {
 
     public void runGame(Graph graph) {
         do {
-            FactNode factNode;
-            if (graph.getFactNodes().size() == 1) {
-                factNode = graph.getFactNodes().get(0);
-            } else {
-                factNode = findPopularProps(graph.getFactNodes());
-            }
-            // TODO: 15.09.2023 аптимизировать 34-39
+            FactNode factNode = graph.getFactNodes().get(0);
             System.out.println("Загадай животное, а я попробую угадать...");
             Boolean answerEnum = getAnswerFromConsole(String.format("%s (да/нет) \n> ", factNode));
 
-            List<FactNode> properties = factNode.getProperties().get(answerEnum);
+            List<FactNode> properties = factNode.getAnswerToFactsMap().get(answerEnum);
             Stack<FactNode> animals = new Stack<>();
             if (properties != null) animals.addAll(properties);
             // TODO: 15.09.2023 аптимизировать 43 - 49
             if (animals.isEmpty()) {
-                finalCondition(graph, answerEnum, factNode);
+                finalCondition(answerEnum, factNode);
             } else {
-                var res = doSteps(graph, animals, answerEnum);
-                if (res == null) {
-                    finalCondition(graph, answerEnum, factNode);
+                var res = doSteps(animals);
+                if (!res) {
+                    finalCondition(answerEnum, factNode);
                 }
             }
 
@@ -62,97 +60,74 @@ public class GameService {
         } while (getAnswerFromConsole("Желаете продолжить? (да/нет) \n> "));
     }
 
-
-    private FactNode doSteps(Graph graph, Stack<FactNode> properties, Boolean firstAnswerEnum) {
-        if (properties.isEmpty()) {
-            return new FactNode(null);
+    private Boolean doSteps(Stack<FactNode> factNodes) {
+        if (factNodes.isEmpty()) {
+            return false;
         }
-        FactNode currentFactNode = properties.pop();
-        Boolean answerEnum1 = getAnswerFromConsole(String.format("%s (да/нет) \n> ", currentFactNode.getLabel()));
-        if (answerEnum1) {
-            List<FactNode> sd = currentFactNode.getProperties().get(answerEnum1); // TODO: 15.09.2023 sd
-            if (sd != null) {
+        FactNode currentFactNode = factNodes.pop();
+        Boolean answer = getAnswerFromConsole(String.format("%s (да/нет) \n> ", currentFactNode.getLabel()));
+        if (answer) {
+            List<FactNode> currentFactNodes = currentFactNode.getAnswerToFactsMap().get(true);
+            if (currentFactNodes != null) {
                 Stack<FactNode> factNodeStack = new Stack<>();
-                factNodeStack.addAll(sd);
-                doSteps(graph, factNodeStack, firstAnswerEnum);
+                factNodeStack.addAll(currentFactNodes);
+                Boolean doStepsResult = doSteps(factNodeStack);
+                if (!doStepsResult) {
+                    finalCondition(true, currentFactNode);
+                    return true;
+                }
             } else {
-                if (currentFactNode.getLabel().equals("Живет на суше")) {
-                    System.out.printf("Это %s, (да/нет)?\n> ", currentFactNode.getAnswerToAnimalMap().get(firstAnswerEnum));
-                } else {
-                    System.out.printf("Это %s, (да/нет)?\n> ", currentFactNode.getAnswerToAnimalMap().get(firstAnswerEnum));
-                }
-                Boolean answerEnum = getAnswerFromConsole(null);
-                if (answerEnum) {
-                    System.out.println("Угадал!\n");
-                } else {
-                    addDataToDB(graph, currentFactNode, true); // TODO: 15.09.2023 naming
-                }
-                return currentFactNode;
+                finalCondition(true, currentFactNode);
+                return true;
             }
         } else {
-            doSteps(graph, properties, firstAnswerEnum);
+            answer = doSteps(factNodes);
         }
-        return answerEnum1 ? new FactNode(null) : null;
+        return answer;
     }
 
-    private void addDataToDB(Graph graph, FactNode factNode, Boolean answerEnum) {
+    private void addDataToDB(FactNode factNode, Boolean answerEnum) {
         String animalName = readConsole("Какое животное ты загадал? \n> ");
         // TODO: 15.09.2023 read console переделать
         String characteristic = readConsole(String.format("Чем “%s” отличается от “%s”?\n> ",
                 animalName, factNode.getAnswerToAnimalMap().get(answerEnum)));
 
         FactNode newFactNode = new FactNode(characteristic);
-        Animal animal = new Animal(animalName);
+        AnimalNode animalNode = new AnimalNode(animalName);
 
         if (factNode.getLabel().equals("Живет на суше")) {
             // List<Property> properties = property.getProperties().get(answer);
             List<FactNode> properties;
-            if (factNode.getProperties().get(answerEnum) != null) {
-                properties = new ArrayList<>(factNode.getProperties().get(answerEnum));
+            if (factNode.getAnswerToFactsMap().get(answerEnum) != null) {
+                properties = new ArrayList<>(factNode.getAnswerToFactsMap().get(answerEnum));
                 properties.add(newFactNode);
             } else {
                 properties = new ArrayList<>();
                 properties.add(newFactNode);
             }
-            factNode.getProperties().put(answerEnum, properties);
+            factNode.getAnswerToFactsMap().put(answerEnum, properties);
         } else {
             List<FactNode> properties;
-            if (factNode.getProperties().get(true) != null) {
-                properties = new ArrayList<>(factNode.getProperties().get(true));
+            if (factNode.getAnswerToFactsMap().get(true) != null) {
+                properties = new ArrayList<>(factNode.getAnswerToFactsMap().get(true));
                 properties.add(newFactNode);
             } else {
                 properties = new ArrayList<>();
                 properties.add(newFactNode);
             }
-            factNode.getProperties().put(true, properties);
+            factNode.getAnswerToFactsMap().put(true, properties);
         }
-        newFactNode.getAnswerToAnimalMap().put(answerEnum, animal);
-        graph.getFactNodes().add(newFactNode);
+        newFactNode.getAnswerToAnimalMap().put(true, animalNode);
+        // graph.getFactNodes().add(newFactNode);
     }
 
-    private void finalCondition(Graph graph, Boolean answerEnum, FactNode factNode) {
+    private void finalCondition(Boolean answerEnum, FactNode factNode) {
         System.out.printf("Это %s, (да/нет)?\n> ", factNode.getAnswerToAnimalMap().get(answerEnum));
         Boolean answerEnum1 = getAnswerFromConsole(null);
         if (answerEnum1) {
             System.out.println("Угадал!\n");
         } else {
-            addDataToDB(graph, factNode, answerEnum);
+            addDataToDB(factNode, answerEnum);
         }
-    }
-
-    private FactNode findPopularProps(List<FactNode> properties) { // TODO: 15.09.2023 изменить
-        int maxAnimal = 0;
-        FactNode out = null;
-        for (FactNode factNode : properties) {
-            int currentSum = 0;
-            for (Map.Entry<Boolean, List<FactNode>> propertyEntry : factNode.getProperties().entrySet()) {
-                currentSum += propertyEntry.getValue().size();
-            }
-            if (currentSum > maxAnimal) {
-                maxAnimal = currentSum;
-                out = factNode;
-            }
-        }
-        return out;
     }
 }
