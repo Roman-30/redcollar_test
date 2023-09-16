@@ -1,8 +1,11 @@
 package shevt.game.model;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class Graph {
     private final List<FactNode> factNodes;
 
@@ -12,10 +15,6 @@ public class Graph {
 
     public Graph() {
         factNodes = new ArrayList<>();
-    }
-
-    public List<FactNode> getFactNodes() {
-        return factNodes;
     }
 
 }
