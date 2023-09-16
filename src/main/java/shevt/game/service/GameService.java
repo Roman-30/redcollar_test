@@ -23,7 +23,6 @@ public class GameService {
     public Graph createGame() {
         return gs.createDataBase();
     }
-
     public void runGame(Graph graph) {
         do {
             FactNode factNode = graph.getFactNodes().get(0);
@@ -32,8 +31,10 @@ public class GameService {
 
             List<FactNode> properties = factNode.getAnswerToFactsMap().get(answer);
             Stack<FactNode> animals = new Stack<>();
-            if (properties != null) animals.addAll(properties);
-            // TODO: 15.09.2023 аптимизировать 43 - 49
+            if (properties != null) {
+                animals.addAll(properties);
+            }
+
             if (animals.isEmpty()) {
                 finalCondition(answer, factNode);
             } else {
