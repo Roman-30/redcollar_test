@@ -1,6 +1,7 @@
 package shevt.game.service;
 
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import shevt.game.model.AnimalNode;
 import shevt.game.model.FactNode;
@@ -10,54 +11,37 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
-import static shevt.game.service.ConsoleService.getAnswerFromConsole;
-import static shevt.game.service.ConsoleService.readConsole;
+import static shevt.game.service.ConsoleService.*;
 
 @Component
+@RequiredArgsConstructor
 public class GameService {
 
     private final ConsoleService cs;
-
-    public GameService(ConsoleService cs) {
-        this.cs = cs;
-    }
+    private final GraphService gs;
 
     public Graph createGame() {
-        Graph graph = new Graph();
-
-        AnimalNode cat = new AnimalNode("Кот");
-        AnimalNode whale = new AnimalNode("Кит");
-        FactNode factNode = new FactNode("Живет на суше");
-
-        factNode.getAnswerToAnimalMap().put(true, cat);
-        factNode.getAnswerToAnimalMap().put(false, whale);
-
-        graph.getFactNodes().add(factNode);
-        return graph;
+        return gs.createDataBase();
     }
 
     public void runGame(Graph graph) {
         do {
             FactNode factNode = graph.getFactNodes().get(0);
-            System.out.println("Загадай животное, а я попробую угадать...");
-            Boolean answerEnum = getAnswerFromConsole(String.format("%s (да/нет) \n> ", factNode));
+            cs.printInformationForPlayer(START_WORDS);
+            Boolean answer = cs.getAnswerForFact(factNode);
 
-            List<FactNode> properties = factNode.getAnswerToFactsMap().get(answerEnum);
+            List<FactNode> properties = factNode.getAnswerToFactsMap().get(answer);
             Stack<FactNode> animals = new Stack<>();
             if (properties != null) animals.addAll(properties);
             // TODO: 15.09.2023 аптимизировать 43 - 49
             if (animals.isEmpty()) {
-                finalCondition(answerEnum, factNode);
+                finalCondition(answer, factNode);
             } else {
-                var res = doSteps(animals);
-                if (!res) {
-                    finalCondition(answerEnum, factNode);
+                if (doSteps(animals)) {
+                    finalCondition(answer, factNode);
                 }
             }
-
-            // TODO: 15.09.2023 Apache и Guava для консоли
-
-        } while (getAnswerFromConsole("Желаете продолжить? (да/нет) \n> "));
+        } while (cs.getAnswerForContinueGame());
     }
 
     private Boolean doSteps(Stack<FactNode> factNodes) {
@@ -65,7 +49,7 @@ public class GameService {
             return false;
         }
         FactNode currentFactNode = factNodes.pop();
-        Boolean answer = getAnswerFromConsole(String.format("%s (да/нет) \n> ", currentFactNode.getLabel()));
+        Boolean answer = cs.getAnswerForFact(currentFactNode);
         if (answer) {
             List<FactNode> currentFactNodes = currentFactNode.getAnswerToFactsMap().get(true);
             if (currentFactNodes != null) {
@@ -86,48 +70,34 @@ public class GameService {
         return answer;
     }
 
-    private void addDataToDB(FactNode factNode, Boolean answerEnum) {
-        String animalName = readConsole("Какое животное ты загадал? \n> ");
-        // TODO: 15.09.2023 read console переделать
-        String characteristic = readConsole(String.format("Чем “%s” отличается от “%s”?\n> ",
-                animalName, factNode.getAnswerToAnimalMap().get(answerEnum)));
+    private void addDataToDB(FactNode factNode, Boolean answer) {
+        String animalName = cs.readAnimalNameFromConsole();
+        String characteristic = cs.readFactFromConsole(animalName, factNode.getAnswerToAnimalMap().get(answer));
 
         FactNode newFactNode = new FactNode(characteristic);
         AnimalNode animalNode = new AnimalNode(animalName);
 
-        if (factNode.getLabel().equals("Живет на суше")) {
-            // List<Property> properties = property.getProperties().get(answer);
-            List<FactNode> properties;
-            if (factNode.getAnswerToFactsMap().get(answerEnum) != null) {
-                properties = new ArrayList<>(factNode.getAnswerToFactsMap().get(answerEnum));
-                properties.add(newFactNode);
-            } else {
-                properties = new ArrayList<>();
-                properties.add(newFactNode);
-            }
-            factNode.getAnswerToFactsMap().put(answerEnum, properties);
-        } else {
-            List<FactNode> properties;
-            if (factNode.getAnswerToFactsMap().get(true) != null) {
-                properties = new ArrayList<>(factNode.getAnswerToFactsMap().get(true));
-                properties.add(newFactNode);
-            } else {
-                properties = new ArrayList<>();
-                properties.add(newFactNode);
-            }
-            factNode.getAnswerToFactsMap().put(true, properties);
+        List<FactNode> factNodes = new ArrayList<>();
+        factNodes.add(newFactNode);
+
+        if (!factNode.getLabel().equals(KEY_QUESTION)) {
+            answer = true;
         }
+
+        if (factNode.getAnswerToFactsMap().get(answer) != null) {
+            factNodes.addAll(factNode.getAnswerToFactsMap().get(answer));
+        }
+        factNode.getAnswerToFactsMap().put(answer, factNodes);
+
         newFactNode.getAnswerToAnimalMap().put(true, animalNode);
-        // graph.getFactNodes().add(newFactNode);
     }
 
-    private void finalCondition(Boolean answerEnum, FactNode factNode) {
-        System.out.printf("Это %s, (да/нет)?\n> ", factNode.getAnswerToAnimalMap().get(answerEnum));
-        Boolean answerEnum1 = getAnswerFromConsole(null);
-        if (answerEnum1) {
-            System.out.println("Угадал!\n");
+    private void finalCondition(Boolean oldAnswer, FactNode factNode) {
+        Boolean answer = cs.getAnswerForAnimal(factNode.getAnswerToAnimalMap().get(oldAnswer));
+        if (answer) {
+            cs.printInformationForPlayer(WIN_WORD);
         } else {
-            addDataToDB(factNode, answerEnum);
+            addDataToDB(factNode, oldAnswer);
         }
     }
 }
