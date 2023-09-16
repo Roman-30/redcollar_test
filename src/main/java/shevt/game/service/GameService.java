@@ -23,6 +23,7 @@ public class GameService {
     public Graph createGame() {
         return gs.createDataBase();
     }
+
     public void runGame(Graph graph) {
         do {
             FactNode factNode = graph.getFactNodes().get(0);
@@ -30,14 +31,12 @@ public class GameService {
             Boolean answer = cs.getAnswerForFact(factNode);
 
             List<FactNode> properties = factNode.getAnswerToFactsMap().get(answer);
-            Stack<FactNode> animals = new Stack<>();
-            if (properties != null) {
-                animals.addAll(properties);
-            }
 
-            if (animals.isEmpty()) {
+            if (properties == null) {
                 finalCondition(answer, factNode);
             } else {
+                Stack<FactNode> animals = new Stack<>();
+                animals.addAll(properties);
                 if (doSteps(animals)) {
                     finalCondition(answer, factNode);
                 }
