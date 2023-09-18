@@ -1,12 +1,12 @@
 package shevt.game.service;
 
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import shevt.game.model.AnimalNode;
 import shevt.game.model.FactNode;
 import shevt.game.model.Graph;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -24,9 +24,9 @@ public class GameService {
         return gs.createDataBase();
     }
 
-    public void runGame(Graph graph) {
+    public void runGame(Graph dataBase) throws IOException {
         do {
-            FactNode factNode = graph.getFactNodes().get(0);
+            FactNode factNode = dataBase.getFactNodes().get(0);
             cs.printInformationForPlayer(START_WORDS);
             Boolean answer = cs.getAnswerForFact(factNode);
 
@@ -37,7 +37,7 @@ public class GameService {
             } else {
                 Stack<FactNode> animals = new Stack<>();
                 animals.addAll(properties);
-                if (doSteps(animals)) {
+                if (!doSteps(animals)) {
                     finalCondition(answer, factNode);
                 }
             }
@@ -70,10 +70,7 @@ public class GameService {
         return answer;
     }
 
-    private void addDataToDB(FactNode factNode, Boolean answer) {
-        String animalName = cs.readAnimalNameFromConsole();
-        String characteristic = cs.readFactFromConsole(animalName, factNode.getAnswerToAnimalMap().get(answer));
-
+    public void addDataToDB(String characteristic, String animalName, FactNode factNode, Boolean answer) {
         FactNode newFactNode = new FactNode(characteristic);
         AnimalNode animalNode = new AnimalNode(animalName);
 
@@ -97,7 +94,9 @@ public class GameService {
         if (answer) {
             cs.printInformationForPlayer(WIN_WORD);
         } else {
-            addDataToDB(factNode, oldAnswer);
+            String animalName = cs.readAnimalNameFromConsole();
+            String characteristic = cs.readFactFromConsole(animalName, factNode.getAnswerToAnimalMap().get(oldAnswer));
+            addDataToDB(characteristic, animalName, factNode, oldAnswer);
         }
     }
 }
