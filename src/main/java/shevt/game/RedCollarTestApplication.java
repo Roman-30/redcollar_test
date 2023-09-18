@@ -29,18 +29,18 @@ public class RedCollarTestApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-//        Graph dataBase;
-//        File file = new File(FILE_NAME);
-//        try {
-//            if (file.length() == 0) {
-//                dataBase = gameService.createGame();
-//            } else {
-//                dataBase = saveService.loadGame(FILE_NAME);
-//            }
-//            gameService.runGame(dataBase);
-//            saveService.saveGame(dataBase, FILE_NAME);
-//        } catch (IOException | ClassNotFoundException e) {
-//            throw new RuntimeException(e);
-//        }
+        Graph dataBase;
+        File file = new File(FILE_NAME);
+        try {
+            if (file.length() == 0) {
+                dataBase = gameService.createGame();
+            } else {
+                dataBase = saveService.loadGame(FILE_NAME);
+            }
+            gameService.runGame(dataBase);
+            saveService.saveGame(dataBase, FILE_NAME);
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
