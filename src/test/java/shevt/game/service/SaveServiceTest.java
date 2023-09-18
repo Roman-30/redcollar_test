@@ -10,6 +10,8 @@ import shevt.game.model.Graph;
 import java.io.IOException;
 @SpringBootTest
 class SaveServiceTest {
+
+    private static final String FILE_NAME = "test_file.ser";
     @Test
     void saveGame() throws IOException, ClassNotFoundException {
         SaveService saveService = new SaveService();
@@ -24,11 +26,12 @@ class SaveServiceTest {
 
         graph.getFactNodes().add(factNode);
 
-        saveService.saveGame(graph, "src/test/java/resources/test_file.ser");
-        Graph loadState = saveService.loadGame("src/test/java/resources/test_file.ser");
+        saveService.saveGame(graph, FILE_NAME);
+        Graph loadState = saveService.loadGame(FILE_NAME);
 
-        Assertions.assertEquals(loadState.getFactNodes().get(0).getAnswerToAnimalMap().get(true), cat);
-        Assertions.assertEquals(loadState.getFactNodes().get(0).getAnswerToAnimalMap().get(false), whale);
+        Assertions.assertEquals(cat, loadState.getFactNodes().get(0).getAnswerToAnimalMap().get(true));
+        Assertions.assertEquals(whale, loadState.getFactNodes().get(0).getAnswerToAnimalMap().get(false));
+        Assertions.assertEquals(factNode, loadState.getFactNodes().get(0));
     }
 
 }
