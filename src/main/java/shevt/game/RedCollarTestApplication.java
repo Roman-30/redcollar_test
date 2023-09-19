@@ -5,6 +5,8 @@ import org.springframework.boot.Banner;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import shevt.game.model.Graph;
 import shevt.game.service.GameService;
 import shevt.game.service.GraphService;
@@ -28,9 +30,10 @@ public class RedCollarTestApplication implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) {
+    public void run(String... args) throws IOException {
         Graph dataBase;
-        File file = new File(FILE_NAME);
+        Resource resource = new ClassPathResource(FILE_NAME);
+        File file = resource.getFile();
         try {
             if (file.length() == 0) {
                 dataBase = gameService.createGame();
